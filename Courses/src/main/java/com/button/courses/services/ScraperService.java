@@ -2,10 +2,14 @@ package com.button.courses.services;
 
 
 import com.button.courses.models.Response;
+import com.opencsv.CSVWriter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 import org.springframework.stereotype.Service;
+
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,8 +30,7 @@ public class ScraperService {
             Element element= document.getElementsByClass("elementor-element-b2f25ff").first();
             Elements urlLink = element.select("li").select("a");
             Elements textCourse= element.select("li");
-//            System.out.println(urlLink.size());
-//            System.out.println(textCourse.size());
+
 
             for(int i=0; i<urlLink.size(); i++) {
                 Response res = new Response();
@@ -36,8 +39,27 @@ public class ScraperService {
                 responses.add(res);
             }
 
+            createCsv(responses);
+
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static void createCsv(Set<Response> responses) {
+        File file= new File("FreeCourses.csv");
+        try {
+            FileWriter fileWriter= new FileWriter(file);
+            CSVWriter csvWriter= new CSVWriter(fileWriter);
+
+            String[] header= {"URL", "Title"};
+            csvWriter.writeNext(header);
+            for(Response r: responses) {
+                csvWriter.writeNext(new String[]{r.getUrl(), r.getTitle()});
+            }
+            csvWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
