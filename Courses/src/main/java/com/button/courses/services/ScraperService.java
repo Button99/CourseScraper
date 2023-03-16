@@ -6,6 +6,7 @@ import com.opencsv.CSVWriter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -16,12 +17,43 @@ import java.util.Set;
 
 @Service
 public class ScraperService {
-    private String url= "https://answersq.com/udemy-paid-courses-for-free-with-certificate/";
+    @Value("#{'${website.urls.list}'.split(',')}")
+    private Set<String> url;
+
+    private Elements urlLink;
+    private Elements textCourse;
 
     public Set<Response> getCourses() {
         Set<Response> responses = new HashSet<>();
-        extractFromAnswersQ(responses, url);
+        for(String s: url) {
+           if(s.contains("answersq")) {
+//               extractFromAnswersQ(responses, s);
+           }
+           if(s.contains("couponscorpion")) {
+               extractFromCouponScorpion(responses, s);
+           }
+        }
+
+        createCsv(responses);
         return responses;
+    }
+
+    private void extractFromCouponScorpion(Set<Response> responses, String url) {
+        try {
+            Document document = Jsoup.connect(url).get();
+            Elements elements= document.getElementsByClass("font120 mt0 mb10 mobfont110 lineheight20 moblineheight15");
+            urlLink= elements.select("a");
+            textCourse= elements.select("h2");
+
+            for(int i=0; i<urlLink.size(); i++) {
+                Response res= new Response();
+                res.setUrl(urlLink.get(i).attr("href"));
+                res.setTitle(textCourse.get(i).text());
+                responses.add(res);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void extractFromAnswersQ(Set<Response> responses, String url) {
@@ -31,16 +63,12 @@ public class ScraperService {
             Elements urlLink = element.select("li").select("a");
             Elements textCourse= element.select("li");
 
-
             for(int i=0; i<urlLink.size(); i++) {
                 Response res = new Response();
                 res.setUrl(urlLink.get(i).attr("href"));
                 res.setTitle(textCourse.get(i).text());
                 responses.add(res);
             }
-
-            createCsv(responses);
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
